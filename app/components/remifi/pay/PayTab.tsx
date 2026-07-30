@@ -28,7 +28,7 @@ export function PayTab({ app }: PayTabProps) {
           Send
         </p>
         <h2 className="mt-1 text-xl font-bold tracking-tight text-pp-ink sm:text-2xl">
-          Hire Remifi &amp; send
+          Send
         </h2>
       </div>
 
@@ -90,8 +90,8 @@ export function PayTab({ app }: PayTabProps) {
             {busy
               ? "Sending…"
               : payAmount.trim()
-                ? `${payAmount.trim()} USDC · Hire Remifi & send`
-                : "Hire Remifi & send"}
+                ? `${payAmount.trim()} USDC · Send`
+                : "Send"}
           </button>
         </div>
       </div>

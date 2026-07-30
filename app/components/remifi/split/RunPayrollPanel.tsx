@@ -282,10 +282,10 @@ export function RunPayrollPanel({
           onClick={() => void payPayroll()}
           className="flex min-h-12 w-full items-center justify-center rounded-full bg-pp-ink px-6 text-sm font-semibold text-pp-white transition hover:bg-pp-ink/90 enabled:active:scale-[0.98] disabled:opacity-50"
         >
-          {busy ? "Paying…" : "Hire Remifi & pay"}
+          {busy ? "Distributing…" : "Distribute"}
         </button>
         <p className="mt-2 text-center text-[11px] font-medium text-pp-ink/35">
-          One hire. Policy shares paid out with proof on Celo.
+          Policy shares paid out with proof on Celo.
         </p>
       </div>
     </div>

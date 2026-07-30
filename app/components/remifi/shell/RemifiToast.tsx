@@ -20,12 +20,12 @@ export function RemifiToast({ app }: RemifiToastProps) {
     <div
       role={isErr ? "alert" : "status"}
       aria-live={isErr ? "assertive" : "polite"}
-      className="pp-toast pointer-events-auto fixed inset-x-3 z-40 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:right-5 sm:bottom-8 sm:max-w-[22rem] lg:bottom-8"
+      className="pp-toast pointer-events-none fixed inset-x-0 z-50 px-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:right-5 sm:bottom-8 sm:max-w-[22rem] sm:px-0 lg:bottom-8"
     >
       <button
         type="button"
         onClick={() => setToast(null)}
-        className={`flex w-full items-start gap-3 rounded-2xl px-3.5 py-3 text-left shadow-pp-soft ring-1 backdrop-blur-md transition active:scale-[0.99] sm:w-[22rem] ${
+        className={`pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl px-3.5 py-3 text-left shadow-pp ring-1 backdrop-blur-md transition active:scale-[0.99] sm:w-[22rem] sm:max-w-none ${
           isOk
             ? "bg-pp-mint-soft/95 ring-pp-mint-deep/35"
             : isErr

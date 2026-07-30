@@ -1,25 +1,23 @@
 # Remifi
 
-**An AI agent that automates recurring payments and fund distributions on Celo.**
+**Payroll, treasury, and revenue splits on Celo — without building a payout stack.**
 
-**Live:** [https://remifi.up.railway.app](https://remifi.up.railway.app) · **Identity:** [ERC-8004 #9745](https://8004scan.io/agents/celo/9745) · **Marketplace:** [Aigora](https://aigora.org/services/42220_0x8004a169fb4a3325136eb29fa0ceb6d2e539a432_9745)
+**Live:**  · **Identity:** [ERC-8004 #9745](https://8004scan.io/agents/celo/9745) · **Marketplace:** [Aigora](https://aigora.org/services/42220_0x8004a169fb4a3325136eb29fa0ceb6d2e539a432_9745)
 
 [![Hackathon](https://img.shields.io/badge/Celo-Agentic%20Payments%20%26%20DeFAI-FCFF52)](https://celobuilders.xyz)
 [![Track 1](https://img.shields.io/badge/Track%201-Most%20Revenue%20Generated-000)](https://dune.com/celo/agentic-payments-defai-hackathon)
 [![Track 2](https://img.shields.io/badge/Track%202-Most%20x402%20Payments-35D07F)](https://x402.celo.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
-**Remifi** is an AI agent that lets users automate recurring payments and fund distributions. Funds are then split automatically based on a policy created by the user:
+In DeFi, paying a team means calculate shares, send a transfer, send another, track tx hashes, repeat — step after step. What if your agent just did all of it? **One hire. Every recipient paid. Proof on Celo.**
 
-```
-20% → Finance
-20% → Management
-60% → Operations
-```
+Right now, every agent that splits USDC either builds its own payout logic or waits for a human to run payroll. That falls apart the moment agents need to pay each other at machine speed, hundreds of times a day. Manual splits don't scale to an agent economy — and untagged transfers don't count on Celo's Track 1 leaderboard.
 
-Perfect for payrolls, DAO treasury flows, bounty payouts, and automated subscriptions.
+**Meet Remifi** — a hireable USDC payout agent on **Celo mainnet**. Describe who gets what in plain English or JSON. Execute once. Every wallet receives USDC. Every agent-sent transfer carries an **attribution tag** so Track 1 credits the volume. Real USDC. Real tx hashes. No custom splitter to build.
 
-Create the policy once. Hire Remifi. Every recipient gets USDC on Celo with on-chain proof. Built for people on [MiniPay](https://docs.minipay.xyz) / web, and for other agents that need a composable payout leg via x402.
+> *Split payroll 60% / 40%. I create the policy once. One execute later, everyone has USDC on Celo — and the transfers show our tag on Celoscan. I never wrote a transfer script. Done.*
+
+Built for **agent-to-agent payouts** and people on [MiniPay](https://docs.minipay.xyz) / web. Other agents hire Remifi as the composable payout leg — offload splits, move at agent speed.
 
 **Tracks:** Most Revenue Generated (primary) · Most x402 Payments (secondary) · Askbots · Aigora feedback
 
@@ -28,16 +26,16 @@ Create the policy once. Hire Remifi. Every recipient gets USDC on Celo with on-c
 ## How it works
 
 ```
-1. Create a policy     →  who gets what (shares / roles)
-2. Hire Remifi         →  fund the run with USDC
-3. Auto-split          →  every recipient paid + proof on Celo
+1. Define the split     →  who gets what (plain English or JSON)
+2. Execute once         →  USDC to every recipient
+3. Prove it             →  Celoscan + attribution tag on-chain
 ```
 
 | Step | What you do | What you get |
 |------|-------------|--------------|
-| **Policy** | Set shares once (e.g. 20 / 20 / 60) | Reusable split rules |
-| **Pay** | One hire / execute | Funds split to every recipient |
-| **Proof** | Open the Proof tab | Tx hashes + Celoscan links |
+| **Policy** | Describe the split once | Reusable policy |
+| **Pay** | One execute / hire | Every recipient paid on Celo |
+| **Instant** | Send to one wallet or name | Single tagged USDC transfer |
 
 Need a one-off send? Instant pay delivers in a single call. Prefer the phone wallet? Open the same app in MiniPay — it auto-connects.
 
@@ -59,8 +57,8 @@ Hire via the [live app](https://remifi.up.railway.app), HTTP APIs, or x402. Ever
 
 ## Demo (≤5 min)
 
-1. **Hook** — *"Remifi is an AI agent for recurring payments and fund distributions."*
-2. **Policy** — Set a 20 / 20 / 60 split → save policy.
+1. **Hook** — *"Every agent builds its own splitter. We don't."*
+2. **Policy** — Type a 60/40 split → save policy.
 3. **Execute** — One pay. USDC lands in every wallet.
 4. **Proof** — Celoscan shows the transfers + attribution tag.
 5. **Leaderboard** — Tagged volume on [Dune](https://dune.com/celo/agentic-payments-defai-hackathon).

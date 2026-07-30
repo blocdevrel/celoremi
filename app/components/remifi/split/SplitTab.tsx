@@ -19,7 +19,7 @@ export function SplitTab({ app }: SplitTabProps) {
         <h2 className="mt-1 text-xl font-bold tracking-tight text-pp-ink sm:text-2xl">
           {splitMode === "create"
             ? "Create a policy"
-            : "Hire Remifi to run a split"}
+            : "Distribute"}
         </h2>
         <p className="mt-1.5 max-w-md text-sm font-medium leading-snug text-pp-ink/50">
           {splitMode === "create"

@@ -1,4 +1,4 @@
-import { env } from "@/lib/config";
+import { getPublicAppUrl } from "@/lib/config";
 import { jsonOk } from "@/lib/http";
 import {
   assertWebhookSecret,
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       if (!payload) {
         await sendTelegramMessage(
           chat,
-          `Remifi receipts\n\nThis bot delivers receipts for <b>your</b> Remifi account — it doesn’t hold funds.\nOpen Remifi in MiniPay (auto-connect, gas-free) or connect a wallet, then tap <b>Link my account</b>.\n${env.NEXT_PUBLIC_APP_URL}`,
+          `Remifi receipts\n\nThis bot delivers receipts for <b>your</b> Remifi account — it doesn’t hold funds.\nOpen Remifi in MiniPay (auto-connect, gas-free) or connect a wallet, then tap <b>Link my account</b>.\n${getPublicAppUrl()}`,
           { parseMode: "HTML" },
         );
         return jsonOk({ ok: true });
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
           chat,
           `Linked to <code>${shortWallet(link.walletAddress)}</code>${
             link.telegramUsername ? ` · @${link.telegramUsername}` : ""
-          }.\nBot: @${bot}\nApp: ${env.NEXT_PUBLIC_APP_URL}`,
+          }.\nBot: @${bot}\nApp: ${getPublicAppUrl()}`,
           { parseMode: "HTML" },
         );
       }

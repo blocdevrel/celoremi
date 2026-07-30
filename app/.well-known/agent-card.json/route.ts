@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export async function GET() {
   try {
-    const path = join(process.cwd(), "lib", "agent", "agent-card.json");
+    const path = join(process.cwd(), "public", ".well-known", "agent-card.json");
     const raw = readFileSync(path, "utf8");
     return new Response(raw, {
       status: 200,

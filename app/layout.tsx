@@ -1,30 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-pp-loaded",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: ["500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
   title: "Remifi",
   description:
-    "Remifi is an AI agent that lets users automate recurring payments and fund distributions. Funds split automatically from your policy. Perfect for payrolls, DAO treasury flows, bounty payouts, and subscriptions.",
+    "One hire. Every recipient paid. Proof on Celo. Hireable USDC payroll & revenue splits with ERC-8021 attribution.",
   applicationName: "Remifi",
-  icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
-  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f6f7f4",
+  themeColor: "#f4f5f2",
   viewportFit: "cover",
+  /** Lets the layout shrink with the virtual keyboard on supporting mobile browsers. */
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -33,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={dmSans.variable}>
+    <html lang="en" className={plusJakarta.variable}>
       <body className="font-pp antialiased">{children}</body>
     </html>
   );

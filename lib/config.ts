@@ -126,6 +126,24 @@ function parseEnv(): Env {
 
 export const env = parseEnv();
 
+/** Canonical public app URL for Telegram / deep links (never stale Railway service names). */
+export function getPublicAppUrl(): string {
+  const configured = (env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+  const railwayDomain = (process.env.RAILWAY_PUBLIC_DOMAIN || "")
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+
+  const looksStale =
+    !configured ||
+    /localhost|127\.0\.0\.1/i.test(configured) ||
+    /tagpay-production/i.test(configured);
+
+  if (!looksStale) return configured;
+  if (railwayDomain) return `https://${railwayDomain}`;
+  return "https://remifi.up.railway.app";
+}
+
 export const CELOSCAN_TX = (hash: string) => `https://celoscan.io/tx/${hash}`;
 
 export const USDC_DECIMALS = 6;
