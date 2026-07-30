@@ -56,6 +56,7 @@ export function SplitTab({ app }: SplitTabProps) {
           filteredPolicies={app.filteredPolicies}
           formatBalanceLine={app.formatBalanceLine}
           hirePriceBaseUnits={app.hirePriceBaseUnits}
+          maxSpendableBaseUnits={app.maxSpendableBaseUnits}
           payPayroll={app.payPayroll}
           policiesLoading={app.policiesLoading}
           policyId={app.policyId}

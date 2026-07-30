@@ -50,7 +50,7 @@ export function RemifiToast({ app }: RemifiToastProps) {
             {title}
           </span>
           <span
-            className={`mt-0.5 block text-[0.75rem] font-medium leading-snug ${
+            className={`mt-0.5 block break-words text-[0.75rem] font-medium leading-snug [overflow-wrap:anywhere] ${
               isErr ? "text-[#8f2f28]" : "text-pp-ink/60"
             }`}
           >

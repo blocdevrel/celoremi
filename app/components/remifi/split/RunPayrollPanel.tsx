@@ -18,6 +18,7 @@ export type RunPayrollPanelProps = Pick<
   | "filteredPolicies"
   | "formatBalanceLine"
   | "hirePriceBaseUnits"
+  | "maxSpendableBaseUnits"
   | "payPayroll"
   | "policiesLoading"
   | "policyId"
@@ -62,6 +63,7 @@ export function RunPayrollPanel({
   filteredPolicies,
   formatBalanceLine,
   hirePriceBaseUnits,
+  maxSpendableBaseUnits,
   payPayroll,
   policiesLoading,
   policyId,
@@ -251,7 +253,7 @@ export function RunPayrollPanel({
             />
             <button
               type="button"
-              onClick={() => applyMaxAmount(setSplitAmount)}
+              onClick={() => void applyMaxAmount(setSplitAmount)}
               className="absolute right-14 top-1/2 -translate-y-1/2 rounded-md px-2 py-0.5 text-[0.7rem] font-semibold text-pp-ink/55 transition hover:bg-pp-white hover:text-pp-ink"
             >
               Max
@@ -268,7 +270,8 @@ export function RunPayrollPanel({
             {hireFee > 0n ? (
               <span>
                 {" "}
-                · Max keeps {formatUsdc(hireFee.toString())} for hire fee
+                · Available ${formatUsdc(maxSpendableBaseUnits().toString())}{" "}
+                after hire fee
               </span>
             ) : null}
           </p>
