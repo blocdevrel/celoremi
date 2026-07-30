@@ -1,0 +1,25 @@
+// Example OpenClaw gateway config for the Remifi money heartbeat.
+// Copy relevant keys into ~/.openclaw/openclaw.json (or your profile config).
+// Confirm exact schema with `openclaw docs` / `openclaw configure` for your CLI version.
+//
+// CRITICAL: Do NOT attach Remifi's Telegram bot token to OpenClaw channels.
+// User receipts use Remifi Next.js webhook (/api/telegram/webhook). Same bot
+// cannot be owned by OpenClaw polling and Remifi webhook at once.
+{
+  "agents": {
+    "defaults": {
+      // Point workspace at this repo's openclaw/ directory (absolute path on the host).
+      "workspace": "/path/to/celoremi/openclaw",
+
+      "heartbeat": {
+        "every": "20m",
+        "includeSystemPromptSection": true
+      },
+
+      // Pick a model your OpenClaw install is configured for.
+      "model": "anthropic/claude-haiku-4-5",
+
+      "skills": ["remifi-core"]
+    }
+  }
+}

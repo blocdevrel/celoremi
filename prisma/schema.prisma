@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Policy {
+  id           String            @id @default(cuid())
+  name         String?
+  recipients   Json
+  /// Wallet that created this policy — policies are private to this address.
+  ownerAddress String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  jobs         PayoutJob[]
+  schedules    PayrollSchedule[]
+
+  @@index([ownerAddress])
+}
+
+model PayoutJob {
+  id           String    @id @default(cuid())
+  policyId     String?
+  policy       Policy?   @relation(fields: [policyId], references: [id])
+  kind         String
+  totalAmount  String
+  status       String
+  /// "router_payroll" | "wallet_payroll" | "instant"
+  settlement   String?
+  fundTxHash   String?
+  splitTxHash  String?
+  transfers    Json?
+  /// x402 hire settlement tx when Track 2 gate was used
+  x402SettlementTxHash String?
+  hireMode     String?
+  error        String?
+  /// Idempotency: (policyId, amount, clientJobId) — unique when set
+  clientJobId  String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@unique([policyId, totalAmount, clientJobId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+/// Recurring payroll — heartbeat runs due schedules (Track 1 + x402 per run).
+model PayrollSchedule {
+  id              String    @id @default(cuid())
+  policyId        String
+  policy          Policy    @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  name            String?
+  /// USDC base units (6 decimals) per run
+  amount          String
+  /// Minimum 20 minutes between runs
+  intervalMinutes Int       @default(1440)
+  enabled         Boolean   @default(true)
+  runCount        Int       @default(0)
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  lastError       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([enabled, nextRunAt])
+  @@index([policyId])
+}
+
+/// Wallet ↔ Telegram chat for settlement / auto-payroll receipts.
+/// Link codes are stateless HMAC (no token table) — see lib/telegram/linkCode.ts
+model TelegramLink {
+  id               String   @id @default(cuid())
+  walletAddress    String   @unique
+  chatId           String   @unique
+  telegramUserId   String?
+  telegramUsername String?
+  linkedAt         DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([chatId])
+}
