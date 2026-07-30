@@ -1,12 +1,36 @@
 /**
  * OpenClaw Guardian 1 — blocking health check before money movement.
- * Usage (from repo root): npx tsx openclaw/skills/remifi-core/scripts/health-check.ts
+ * Usage: npx tsx openclaw/skills/remifi-core/scripts/health-check.ts
+ * Optional: REMIFI_ROOT=/path/to/celoremi (Remifi package root)
  */
 import { config as loadEnv } from "dotenv";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
-const root = resolve(__dirname, "../../../../");
+function findRemifiRoot(): string {
+  if (process.env.REMIFI_ROOT && existsSync(process.env.REMIFI_ROOT)) {
+    return process.env.REMIFI_ROOT;
+  }
+  let dir = __dirname;
+  for (let i = 0; i < 10; i += 1) {
+    const pkgPath = resolve(dir, "package.json");
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { name?: string };
+        if (pkg.name === "remifi") return dir;
+      } catch {
+        /* keep walking */
+      }
+    }
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return resolve(__dirname, "../../../../");
+}
+
+const root = findRemifiRoot();
 for (const file of [".env.local", ".env"]) {
   const p = resolve(root, file);
   if (existsSync(p)) loadEnv({ path: p, override: false });
@@ -14,12 +38,11 @@ for (const file of [".env.local", ".env"]) {
 
 async function main() {
   process.chdir(root);
+  const { env } = await import(pathToFileURL(resolve(root, "lib/config.ts")).href);
 
-  const { env } = await import("../../../../lib/config");
   const base =
     env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "http://127.0.0.1:3000";
 
-  // Prefer live deploy health; fall back to local process checks.
   let remote: Record<string, unknown> | null = null;
   try {
     const res = await fetch(`${base}/api/health`, {
@@ -36,13 +59,14 @@ async function main() {
     const router = remote.router as { ok?: boolean } | undefined;
     const healthy =
       ok &&
-      (x402?.facilitatorOk !== false) &&
+      x402?.facilitatorOk !== false &&
       (router?.ok !== false || router == null);
 
     console.log(
       JSON.stringify(
         {
           source: "remote",
+          remifiRoot: root,
           url: `${base}/api/health`,
           ok: healthy,
           chainOk: remote.chainOk,
@@ -60,13 +84,14 @@ async function main() {
     return;
   }
 
-  // Local-only: require agent key + RPC reachability via viem-less ping.
   if (!env.AGENT_PRIVATE_KEY || !env.CELO_RPC_URL) {
     console.log(
       JSON.stringify({
         source: "local",
+        remifiRoot: root,
         ok: false,
-        error: "Missing AGENT_PRIVATE_KEY or CELO_RPC_URL; remote health unreachable",
+        error:
+          "Missing AGENT_PRIVATE_KEY or CELO_RPC_URL; remote health unreachable",
       }),
     );
     process.exit(1);
@@ -84,11 +109,12 @@ async function main() {
     signal: AbortSignal.timeout(10_000),
   });
   const rpcBody = (await rpc.json()) as { result?: string };
-  const chainOk = rpcBody.result?.toLowerCase() === "0xa4ec"; // 42220
+  const chainOk = rpcBody.result?.toLowerCase() === "0xa4ec";
 
   console.log(
     JSON.stringify({
       source: "local",
+      remifiRoot: root,
       ok: chainOk,
       chainIdHex: rpcBody.result ?? null,
       agentAddress: env.AGENT_ADDRESS,

@@ -19,6 +19,8 @@
     "heartbeat": "tsx scripts/run-heartbeat.ts",
     "openclaw:health": "tsx openclaw/skills/remifi-core/scripts/health-check.ts",
     "openclaw:due": "tsx openclaw/skills/remifi-core/scripts/run-due.ts",
+    "openclaw:tick": "tsx scripts/openclaw-tick.ts",
+    "openclaw:wire": "node scripts/wire-openclaw-cron.mjs",
     "test:volume-engine": "tsx scripts/test-volume-engine.ts",
     "8004:register": "tsx scripts/register-8004.ts",
     "8004:set-uri": "tsx scripts/set-agent-uri.ts",
