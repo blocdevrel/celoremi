@@ -82,7 +82,8 @@ async function interpretViaOpenRouter(
     body: JSON.stringify({
       model,
       temperature: 0,
-      max_tokens: 1024,
+      // Keep low: OpenRouter free/low balance rejects when max_tokens > affordability.
+      max_tokens: 512,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: policySystemPrompt },
@@ -150,15 +151,29 @@ async function interpretViaAnthropic(
   return parsePolicyJson(text, "Anthropic");
 }
 
+function isProviderCreditOrQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /openrouter\s*402|requires more credits|fewer max_tokens|credit balance is too low|purchase credits|can only afford|billing|insufficient.?credit|rate.?limit|overloaded/i.test(
+    msg,
+  );
+}
+
 /**
  * Plain-English (or messy JSON) → split policy draft.
- * Prefers OpenRouter; falls back to Anthropic if configured.
+ * Prefers OpenRouter; falls back to Anthropic if OpenRouter is missing or out of credits.
  */
 export async function interpretPolicyText(
   requirements: string,
 ): Promise<LlmPolicyDraft> {
   if (env.OPENROUTER_API_KEY) {
-    return interpretViaOpenRouter(requirements);
+    try {
+      return await interpretViaOpenRouter(requirements);
+    } catch (err) {
+      if (env.ANTHROPIC_API_KEY && isProviderCreditOrQuotaError(err)) {
+        return interpretViaAnthropic(requirements);
+      }
+      throw err;
+    }
   }
   if (env.ANTHROPIC_API_KEY) {
     return interpretViaAnthropic(requirements);

@@ -38,7 +38,7 @@ function unwrapNaturalLanguage(asJson: unknown): string | null {
 
 function isLlmCreditError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err ?? "");
-  return /credit balance is too low|purchase credits|billing|rate.?limit|overloaded/i.test(
+  return /openrouter\s*402|requires more credits|fewer max_tokens|credit balance is too low|purchase credits|can only afford|billing|insufficient.?credit|rate.?limit|overloaded/i.test(
     msg,
   );
 }
