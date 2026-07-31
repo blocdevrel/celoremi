@@ -1,4 +1,5 @@
 import { resolveRecipientAddresses } from "../ens/resolve";
+import { tryParsePolicyTextHeuristic } from "./heuristic";
 import {
   hasLlmKeys,
   interpretPolicyText,
@@ -33,6 +34,13 @@ function unwrapNaturalLanguage(asJson: unknown): string | null {
     if (typeof v === "string" && v.trim()) return v.trim();
   }
   return null;
+}
+
+function isLlmCreditError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /credit balance is too low|purchase credits|billing|rate.?limit|overloaded/i.test(
+    msg,
+  );
 }
 
 async function fromDraft(
@@ -71,7 +79,7 @@ function resolvePolicyName(userName?: string, fallback?: string): string {
 }
 
 /**
- * Remifi-style policy intake: plain English via Anthropic, or JSON recipients.
+ * Remifi-style policy intake: heuristic / Anthropic English, or JSON recipients.
  * User-supplied `name` from the UI always wins over LLM/JSON suggestions.
  * ENS / Base names are resolved before validate.
  */
@@ -92,7 +100,11 @@ export async function interpretPolicyFromInput(input: {
             input.name,
             typeof o.name === "string" ? o.name : undefined,
           ),
-          o.recipients as Array<{ address: string; bps: number; label?: string }>,
+          o.recipients as Array<{
+            address: string;
+            bps: number;
+            label?: string;
+          }>,
           "json",
         );
       }
@@ -102,15 +114,35 @@ export async function interpretPolicyFromInput(input: {
       }
     }
 
+    // Prefer local parse for clear % + address phrases (works without Anthropic credits).
+    const heuristic = tryParsePolicyTextHeuristic(text);
+    if (heuristic) {
+      return fromDraft(
+        resolvePolicyName(input.name, heuristic.name),
+        heuristic.recipients,
+        "text",
+      );
+    }
+
     if (!hasLlmKeys()) {
       throw new Error(llmRequiredError("createPolicy"));
     }
-    const draft = await interpretPolicyText(text);
-    return fromDraft(
-      resolvePolicyName(input.name, draft.name),
-      draft.recipients,
-      "text",
-    );
+
+    try {
+      const draft = await interpretPolicyText(text);
+      return fromDraft(
+        resolvePolicyName(input.name, draft.name),
+        draft.recipients,
+        "text",
+      );
+    } catch (err) {
+      if (isLlmCreditError(err)) {
+        throw new Error(
+          "AI policy parsing is unavailable (Anthropic credits). Use Manual shares, or write percents and 0x addresses like: 30% to 0x… and 70% to 0x…",
+        );
+      }
+      throw err;
+    }
   }
 
   if (input.recipients?.length) {
