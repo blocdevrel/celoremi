@@ -2,7 +2,7 @@
 
 **An AI agent that automates recurring payments and fund distributions on Celo.**
 
-**Live:** [https://remifi.up.railway.app](https://remifi.up.railway.app) · **Identity:** [ERC-8004 #9745](https://8004scan.io/agents/celo/9745) · **Marketplace:** [Aigora](https://aigora.org/services/42220_0x8004a169fb4a3325136eb29fa0ceb6d2e539a432_9745)
+**Live:** · **Identity:** [ERC-8004 #9745](https://8004scan.io/agents/celo/9745) · **Marketplace:** [Aigora](https://aigora.org/services/42220_0x8004a169fb4a3325136eb29fa0ceb6d2e539a432_9745)
 
 [![Hackathon](https://img.shields.io/badge/Celo-Agentic%20Payments%20%26%20DeFAI-FCFF52)](https://celobuilders.xyz)
 [![Track 1](https://img.shields.io/badge/Track%201-Most%20Revenue%20Generated-000)](https://dune.com/celo/agentic-payments-defai-hackathon)
