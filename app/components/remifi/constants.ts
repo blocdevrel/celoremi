@@ -32,7 +32,7 @@ export const HOME_FAQS = [
 
 export const TABS: Array<[Tab, string]> = [
   ["home", "Home"],
-  ["split", "Split"],
+  ["split", "Policy"],
   ["pay", "Send"],
   ["status", "Proof"],
 ];

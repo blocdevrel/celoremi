@@ -28,7 +28,15 @@ export function jsonError(error: unknown, fallbackStatus = 500) {
   }
   const message = error instanceof Error ? error.message : "Unknown error";
   const status =
-    message.includes("not found") || message.includes("Invalid address")
+    message.includes("not found") ||
+    message.includes("Invalid address") ||
+    message.includes("Invalid wallet") ||
+    message.includes("Invalid recipient") ||
+    message.includes("must sum") ||
+    message.includes("must include") ||
+    message.includes("AI policy parsing") ||
+    message.includes("Provide plain English") ||
+    message.includes("needs natural-language")
       ? 400
       : fallbackStatus;
   console.error("[remifi]", message);

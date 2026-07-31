@@ -30,7 +30,7 @@ export function SplitModeToggle({ mode, onChange }: SplitModeToggleProps) {
             : "text-pp-ink/45 hover:text-pp-ink"
         }`}
       >
-        Hire &amp; run
+        Distribute
       </button>
     </div>
   );

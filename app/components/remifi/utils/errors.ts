@@ -42,6 +42,9 @@ export function friendlyWalletError(
   if (/timeout|timed out|network error|failed to fetch|fetch failed/i.test(msg)) {
     return "Network hiccup — check connection and try again";
   }
+  if (/credit balance is too low|OpenRouter|Anthropic|AI policy parsing|purchase credits|insufficient.?credits/i.test(msg)) {
+    return "AI parsing is unavailable. Switch to Manual, or use clear percents + addresses like 30% to 0x… and 70% to 0x…";
+  }
   if (/personal wallet/i.test(msg)) return msg;
 
   return msg.length > 120 ? `${msg.slice(0, 117)}…` : msg;

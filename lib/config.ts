@@ -101,6 +101,14 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => emptyToUndef(v) ?? "claude-haiku-4-5-20251001"),
+  /** Preferred: OpenRouter for plain-English policy create */
+  OPENROUTER_API_KEY: z.string().optional().transform(emptyToUndef),
+  OPENROUTER_MODEL: z
+    .string()
+    .optional()
+    .transform((v) => emptyToUndef(v) ?? "anthropic/claude-haiku-4.5"),
+  OPENROUTER_SITE_URL: z.string().optional().transform(emptyToUndef),
+  OPENROUTER_APP_NAME: z.string().optional().transform(emptyToUndef),
   /** Ethereum L1 RPC for ENS (*.eth) resolution — avoid flaky llamarpc defaults */
   ETH_RPC_URL: z.string().url().default("https://ethereum.publicnode.com"),
   /** Base RPC for Base Names (*.base.eth) resolution */
@@ -125,6 +133,24 @@ function parseEnv(): Env {
 }
 
 export const env = parseEnv();
+
+/** Canonical public app URL for Telegram / deep links (never stale Railway service names). */
+export function getPublicAppUrl(): string {
+  const configured = (env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+  const railwayDomain = (process.env.RAILWAY_PUBLIC_DOMAIN || "")
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+
+  const looksStale =
+    !configured ||
+    /localhost|127\.0\.0\.1/i.test(configured) ||
+    /tagpay-production/i.test(configured);
+
+  if (!looksStale) return configured;
+  if (railwayDomain) return `https://${railwayDomain}`;
+  return "https://remifi.up.railway.app";
+}
 
 export const CELOSCAN_TX = (hash: string) => `https://celoscan.io/tx/${hash}`;
 

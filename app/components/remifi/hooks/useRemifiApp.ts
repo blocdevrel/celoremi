@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Address, WalletClient } from "viem";
-import { readUsdcBalanceBaseUnits, usdcDecimalForInput } from "../../../../lib/minipay/balance";
+import { readUsdcBalanceBaseUnits } from "../../../../lib/minipay/balance";
 import { isMiniPayRuntime, isMobileDevice } from "../../../../lib/minipay/connect";
 import { sendTaggedUsdcFromWallet } from "../../../../lib/minipay/wallet-payout";
 import { computeSplitAmounts } from "../../../../lib/policy/validate";
@@ -27,7 +27,17 @@ import {
   type RemifiToastState,
 } from "../utils/errors";
 import { normalizePolicy, policyMatchesSearch, sortPoliciesNewestFirst, summarizePolicyRecipients } from "../utils/policy";
-import { formatUsdc, parseUsdcBaseUnits, parseUsdcHuman, usdcToBaseUnits } from "../utils/usdc";
+import {
+  clampSendAmountToReserve,
+  formatUsdc,
+  formatBaseUnitsForInput,
+  maxSpendableAfterReserve,
+  parseUsdcBaseUnits,
+  parseUsdcHuman,
+  reserveBeforeSend,
+  usdcToBaseUnits,
+} from "../utils/usdc";
+import { shortAddr } from "../utils/address";
 
 export function useRemifiApp() {
   const [tab, setTab] = useState<Tab>("home");
@@ -53,6 +63,11 @@ export function useRemifiApp() {
   );
   const [policySearch, setPolicySearch] = useState("");
   const wallet = useMiniPayWallet();
+  const walletIsAgent = Boolean(
+    wallet.address &&
+      health?.agentAddress &&
+      wallet.address.toLowerCase() === health.agentAddress.toLowerCase(),
+  );
 
   const [policyName, setPolicyName] = useState("");
   const [englishText, setEnglishText] = useState("");
@@ -318,7 +333,7 @@ export function useRemifiApp() {
     if (!Number.isFinite(n)) return raw;
     return n.toLocaleString(undefined, {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      maximumFractionDigits: 2,
     });
   }
 
@@ -328,15 +343,34 @@ export function useRemifiApp() {
       : 0n;
   }
 
-  /** Spendable after reserving x402 hire fee (Binance-style Max). */
-  function maxSpendableBaseUnits(): bigint {
-    const bal = parseUsdcHuman(walletUsdcBalance);
-    const hire = hirePriceBaseUnits();
-    return bal > hire ? bal - hire : 0n;
+  /** Reserved before send so x402 hire settle still has funds (and MiniPay gas pad). */
+  function reserveBeforeSendBaseUnits(): bigint {
+    return reserveBeforeSend(hirePriceBaseUnits(), {
+      miniPay: inMiniPay || wallet.isMiniPay,
+    });
   }
 
-  function applyMaxAmount(setter: (value: string) => void) {
-    const bal = parseUsdcHuman(walletUsdcBalance);
+  /** Spendable after reserving hire (+ MiniPay pad) — Binance-style Max. */
+  function maxSpendableBaseUnits(balanceBase?: bigint): bigint {
+    const bal = balanceBase ?? parseUsdcHuman(walletUsdcBalance);
+    return maxSpendableAfterReserve(bal, reserveBeforeSendBaseUnits());
+  }
+
+  async function refreshPayerUsdcBalance(): Promise<bigint> {
+    if (!wallet.address || walletIsAgent) return 0n;
+    try {
+      const onChain = await readUsdcBalanceBaseUnits(wallet.address);
+      const human = formatBaseUnitsForInput(onChain) || "0.00";
+      setWalletUsdcBalance(human);
+      return onChain;
+    } catch {
+      await loadWalletBalance();
+      return parseUsdcHuman(walletUsdcBalance);
+    }
+  }
+
+  async function applyMaxAmount(setter: (value: string) => void) {
+    const bal = await refreshPayerUsdcBalance();
     if (bal <= 0n) {
       setToast(
         wallet.address
@@ -349,13 +383,21 @@ export function useRemifiApp() {
       );
       return;
     }
-    const hire = hirePriceBaseUnits();
-    const spendable = maxSpendableBaseUnits();
+    const reserve = reserveBeforeSendBaseUnits();
+    const spendable = maxSpendableBaseUnits(bal);
     if (spendable <= 0n) {
-      setToast(hireFeeShortfallMessage(hire));
+      setToast(
+        reserve > 0n
+          ? hireFeeShortfallMessage(hirePriceBaseUnits() || reserve)
+          : {
+              kind: "err",
+              title: "No USDC yet",
+              text: "This wallet has $0 USDC on Celo. Bridge or buy USDC, then retry.",
+            },
+      );
       return;
     }
-    const formatted = usdcDecimalForInput(Number(spendable) / 1e6);
+    const formatted = formatBaseUnitsForInput(spendable);
     if (formatted) setter(formatted);
   }
 
@@ -382,8 +424,7 @@ export function useRemifiApp() {
 
   /**
    * Ensures the payer can cover send amount + hire fee.
-   * If amount leaves no room for the fee, clamps down to balance − fee (like Binance Max).
-   * Returns the amount (base units string) to send, or null if blocked.
+   * Clamps to balance − reserve (Binance Max) so x402 settle still has funds after the send.
    */
   async function ensureWalletFundedForPay(
     amountStr: string,
@@ -398,6 +439,7 @@ export function useRemifiApp() {
       return null;
     }
     const hirePrice = hirePriceBaseUnits();
+    const reserve = reserveBeforeSendBaseUnits();
 
     if (!wallet.address || walletIsAgent) {
       setToast(
@@ -409,13 +451,13 @@ export function useRemifiApp() {
       return null;
     }
 
-    const userBal = parseUsdcHuman(walletUsdcBalance);
-    const spendable = userBal > hirePrice ? userBal - hirePrice : 0n;
+    const userBal = await refreshPayerUsdcBalance();
+    amount = clampSendAmountToReserve(amount, userBal, reserve);
 
-    if (spendable <= 0n) {
+    if (amount <= 0n) {
       setToast(
-        hirePrice > 0n
-          ? hireFeeShortfallMessage(hirePrice)
+        hirePrice > 0n || reserve > 0n
+          ? hireFeeShortfallMessage(hirePrice || reserve)
           : {
               kind: "err",
               title: "No USDC yet",
@@ -425,19 +467,15 @@ export function useRemifiApp() {
       return null;
     }
 
-    // Truly over balance → reject. Full-wallet send → clamp so hire fee fits.
-    if (amount > userBal) {
+    if (amount + reserve > userBal) {
       setToast(
         lowBalanceMessage({
-          need: amount + hirePrice,
+          need: amount + reserve,
           have: userBal,
           hireFee: hirePrice > 0n ? hirePrice : undefined,
         }),
       );
       return null;
-    }
-    if (amount > spendable) {
-      amount = spendable;
     }
 
     if (!health?.attributionTag) {
@@ -850,7 +888,7 @@ export function useRemifiApp() {
       const amount = await ensureWalletFundedForPay(rawAmount);
       if (!amount) return;
       if (amount !== rawAmount) {
-        const clamped = usdcDecimalForInput(Number(amount) / 1e6);
+        const clamped = formatBaseUnitsForInput(BigInt(amount));
         if (clamped) setSplitAmount(clamped);
       }
 
@@ -1071,7 +1109,7 @@ export function useRemifiApp() {
       const amount = await ensureWalletFundedForPay(rawAmount);
       if (!amount) return;
       if (amount !== rawAmount) {
-        const clamped = usdcDecimalForInput(Number(amount) / 1e6);
+        const clamped = formatBaseUnitsForInput(BigInt(amount));
         if (clamped) setPayAmount(clamped);
       }
 
@@ -1092,7 +1130,11 @@ export function useRemifiApp() {
       setToast({
         kind: "info",
         title: "Confirm in wallet",
-        text: `Send $${formatUsdc(amount)} USDC to ${hit.ens || hit.input || "recipient"}`,
+        text: `Send $${formatUsdc(amount)} USDC to ${
+          hit.ens
+            ? shortAddr(hit.ens)
+            : shortAddr(hit.address || hit.input || "recipient")
+        }`,
       });
       const txHash = await sendTaggedUsdcFromWallet({
         client: connected.client,
@@ -1155,12 +1197,6 @@ export function useRemifiApp() {
     ? filteredJobs
     : filteredJobs.slice(0, PROOF_PAGE_SIZE);
   const hiddenJobCount = Math.max(0, filteredJobs.length - visibleJobs.length);
-
-  const walletIsAgent = Boolean(
-    wallet.address &&
-      health?.agentAddress &&
-      wallet.address.toLowerCase() === health.agentAddress.toLowerCase(),
-  );
 
   const useMiniPayLink = isMobile && !inMiniPay;
 
@@ -1225,7 +1261,7 @@ export function useRemifiApp() {
     payTo, setPayTo, payAmount, setPayAmount, scheduleInterval,
     setScheduleInterval, schedulesLoading, activeSchedules,
     walletUsdcBalance, inMiniPay, isMobile, loadRecentJobs,
-    formatBalanceLine, hirePriceBaseUnits, applyMaxAmount, selectPolicy,
+    formatBalanceLine, hirePriceBaseUnits, maxSpendableBaseUnits, applyMaxAmount, selectPolicy,
     resetPolicyDraft, updateManualRecipient, addManualRecipient,
     removeManualRecipient, savePolicy, payPayroll, toggleAutoPayroll,
     instantPay, filteredJobs, visibleJobs, hiddenJobCount, walletIsAgent,

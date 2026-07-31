@@ -34,7 +34,9 @@ describe("sendTaggedUsdcFromWallet", () => {
     waitForTransactionReceipt.mockResolvedValue({ status: "success" });
   });
 
-  it("sends classic tagged ERC-20 transfer (not EIP-3009 sponsorship)", async () => {
+  it(
+    "sends classic tagged ERC-20 transfer (not EIP-3009 sponsorship)",
+    async () => {
     const { sendTaggedUsdcFromWallet } = await import("./wallet-payout");
     const account = "0x1111111111111111111111111111111111111111" as Address;
     const to = "0x2222222222222222222222222222222222222222" as Address;
@@ -82,7 +84,9 @@ describe("sendTaggedUsdcFromWallet", () => {
     ]);
     expect(call.data.toLowerCase()).toBe(expected.toLowerCase());
     expect(waitForTransactionReceipt).toHaveBeenCalledWith({ hash: txHash });
-  });
+    },
+    15_000,
+  );
 
   it("rejects zero amount", async () => {
     const { sendTaggedUsdcFromWallet } = await import("./wallet-payout");

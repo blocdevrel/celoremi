@@ -12,6 +12,7 @@ export function PayTab({ app }: PayTabProps) {
     formatBalanceLine,
     hirePriceBaseUnits,
     instantPay,
+    maxSpendableBaseUnits,
     payAmount,
     payTo,
     setPayAmount,
@@ -19,6 +20,7 @@ export function PayTab({ app }: PayTabProps) {
     walletUsdcBalance,
   } = app;
   const hireFee = hirePriceBaseUnits();
+  const available = maxSpendableBaseUnits();
   const canSend = Boolean(payTo.trim() && payAmount.trim());
 
   return (
@@ -28,7 +30,7 @@ export function PayTab({ app }: PayTabProps) {
           Send
         </p>
         <h2 className="mt-1 text-xl font-bold tracking-tight text-pp-ink sm:text-2xl">
-          Hire Remifi &amp; send
+          Send
         </h2>
       </div>
 
@@ -56,7 +58,7 @@ export function PayTab({ app }: PayTabProps) {
               />
               <button
                 type="button"
-                onClick={() => applyMaxAmount(setPayAmount)}
+                onClick={() => void applyMaxAmount(setPayAmount)}
                 className="absolute right-14 top-1/2 -translate-y-1/2 rounded-md px-2 py-0.5 text-[0.7rem] font-semibold text-pp-ink/55 transition hover:bg-pp-white hover:text-pp-ink"
               >
                 Max
@@ -73,7 +75,7 @@ export function PayTab({ app }: PayTabProps) {
               {hireFee > 0n ? (
                 <span>
                   {" "}
-                  · Hire fee {formatUsdc(hireFee.toString())} USDC
+                  · Available ${formatUsdc(available.toString())} after hire fee
                 </span>
               ) : null}
             </p>
@@ -90,8 +92,8 @@ export function PayTab({ app }: PayTabProps) {
             {busy
               ? "Sending…"
               : payAmount.trim()
-                ? `${payAmount.trim()} USDC · Hire Remifi & send`
-                : "Hire Remifi & send"}
+                ? `${payAmount.trim()} USDC · Send`
+                : "Send"}
           </button>
         </div>
       </div>

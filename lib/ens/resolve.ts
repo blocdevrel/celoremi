@@ -61,29 +61,6 @@ async function ensAddressFromRpcs(
   return null;
 }
 
-async function ensNameFromAddress(
-  address: `0x${string}`,
-): Promise<string | undefined> {
-  for (const [chain, urls] of [
-    [base, BASE_RPC_FALLBACKS],
-    [mainnet, ETH_RPC_FALLBACKS],
-  ] as const) {
-    for (const url of urls) {
-      try {
-        const client = createPublicClient({
-          chain,
-          transport: http(url, { timeout: 8_000 }),
-        });
-        const ens = await client.getEnsName({ address });
-        if (ens) return ens;
-      } catch {
-        /* try next */
-      }
-    }
-  }
-  return undefined;
-}
-
 export type ResolvedAddress = {
   address: `0x${string}`;
   ens?: string;
@@ -93,6 +70,8 @@ export type ResolvedAddress = {
 /**
  * Resolve a 0x address, ENS name (*.eth on Ethereum), or Base name (*.base.eth).
  * Remifi on Celo: names resolve off Celo; settlement still pays USDC on Celo.
+ *
+ * Plain 0x addresses skip reverse-ENS (slow public RPCs) so policy create stays fast.
  */
 export async function resolveAddressInput(raw: string): Promise<ResolvedAddress> {
   const trimmed = raw.trim();
@@ -102,8 +81,7 @@ export async function resolveAddressInput(raw: string): Promise<ResolvedAddress>
 
   if (isHexAddress(trimmed) || isAddress(trimmed)) {
     const address = getAddress(trimmed) as `0x${string}`;
-    const ens = await ensNameFromAddress(address);
-    return ens ? { address, ens } : { address };
+    return { address };
   }
 
   if (!looksLikeEns(trimmed)) {

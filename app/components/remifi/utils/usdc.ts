@@ -1,3 +1,11 @@
+export {
+  clampSendAmountToReserve,
+  formatBaseUnitsForInput,
+  maxSpendableAfterReserve,
+  MINIPAY_SEND_PAD_BASE,
+  reserveBeforeSend,
+} from "../../../../lib/usdc/spendable";
+
 export function usdcToBaseUnits(amount: string): string | null {
   const t = amount.trim();
   if (!t || !/^\d+(\.\d{1,6})?$/.test(t)) return null;
@@ -31,6 +39,6 @@ export function formatUsdc(base?: string | null) {
   if (!Number.isFinite(n)) return base;
   return n.toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    maximumFractionDigits: 2,
   });
 }

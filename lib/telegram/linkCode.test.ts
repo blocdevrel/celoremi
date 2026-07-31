@@ -1,9 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+
+vi.hoisted(() => {
+  process.env.TELEGRAM_WEBHOOK_SECRET ??= "test-secret-for-link-codes";
+});
+
 import { makeLinkCode, verifyLinkCode } from "./linkCode";
 
 const WALLET = "0xB98cFAC37b8bD7f549789718aC17F8aEE7cE0c37";
 
 describe("telegram link codes", () => {
+  beforeAll(() => {
+    process.env.TELEGRAM_WEBHOOK_SECRET ??= "test-secret-for-link-codes";
+  });
+
   it("round-trips a wallet within the ttl", () => {
     const code = makeLinkCode(WALLET);
     expect(code).toMatch(/^[0-9a-f]{64}$/);

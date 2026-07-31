@@ -18,6 +18,7 @@ export type RunPayrollPanelProps = Pick<
   | "filteredPolicies"
   | "formatBalanceLine"
   | "hirePriceBaseUnits"
+  | "maxSpendableBaseUnits"
   | "payPayroll"
   | "policiesLoading"
   | "policyId"
@@ -62,6 +63,7 @@ export function RunPayrollPanel({
   filteredPolicies,
   formatBalanceLine,
   hirePriceBaseUnits,
+  maxSpendableBaseUnits,
   payPayroll,
   policiesLoading,
   policyId,
@@ -251,7 +253,7 @@ export function RunPayrollPanel({
             />
             <button
               type="button"
-              onClick={() => applyMaxAmount(setSplitAmount)}
+              onClick={() => void applyMaxAmount(setSplitAmount)}
               className="absolute right-14 top-1/2 -translate-y-1/2 rounded-md px-2 py-0.5 text-[0.7rem] font-semibold text-pp-ink/55 transition hover:bg-pp-white hover:text-pp-ink"
             >
               Max
@@ -268,7 +270,8 @@ export function RunPayrollPanel({
             {hireFee > 0n ? (
               <span>
                 {" "}
-                · Max keeps {formatUsdc(hireFee.toString())} for hire fee
+                · Available ${formatUsdc(maxSpendableBaseUnits().toString())}{" "}
+                after hire fee
               </span>
             ) : null}
           </p>
@@ -282,10 +285,10 @@ export function RunPayrollPanel({
           onClick={() => void payPayroll()}
           className="flex min-h-12 w-full items-center justify-center rounded-full bg-pp-ink px-6 text-sm font-semibold text-pp-white transition hover:bg-pp-ink/90 enabled:active:scale-[0.98] disabled:opacity-50"
         >
-          {busy ? "Paying…" : "Hire Remifi & pay"}
+          {busy ? "Distributing…" : "Distribute"}
         </button>
         <p className="mt-2 text-center text-[11px] font-medium text-pp-ink/35">
-          One hire. Policy shares paid out with proof on Celo.
+          Policy shares paid out with proof on Celo.
         </p>
       </div>
     </div>
