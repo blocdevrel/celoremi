@@ -53,7 +53,7 @@ Need a one-off send? Instant pay delivers in a single call. Prefer the phone wal
 | Job proof | Status, tx hashes, Celoscan links |
 | Health | Liveness + agent balance hint |
 
-Hire via the [live app](https://remifi.up.railway.app), HTTP APIs, or x402. Every **Pay** / **Execute** settles an x402 hire (Track 2) then a tagged USDC transfer (Track 1).
+, HTTP APIs, or x402. Every **Pay** / **Execute** settles an x402 hire (Track 2) then a tagged USDC transfer (Track 1).
 
 ---
 
@@ -90,7 +90,7 @@ Next.js · TypeScript · viem on **Celo** · USDC · ERC-8021 attribution · ERC
 
 | | |
 |---|---|
-| **App** | https://remifi.up.railway.app |
+
 | **8004scan** | https://8004scan.io/agents/celo/9745 |
 | **Aigora** | https://aigora.org/services/42220_0x8004a169fb4a3325136eb29fa0ceb6d2e539a432_9745 |
 | **Leaderboard** | https://dune.com/celo/agentic-payments-defai-hackathon |
