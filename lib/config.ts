@@ -101,6 +101,14 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => emptyToUndef(v) ?? "claude-haiku-4-5-20251001"),
+  /** Preferred: OpenRouter for plain-English policy create */
+  OPENROUTER_API_KEY: z.string().optional().transform(emptyToUndef),
+  OPENROUTER_MODEL: z
+    .string()
+    .optional()
+    .transform((v) => emptyToUndef(v) ?? "anthropic/claude-haiku-4.5"),
+  OPENROUTER_SITE_URL: z.string().optional().transform(emptyToUndef),
+  OPENROUTER_APP_NAME: z.string().optional().transform(emptyToUndef),
   /** Ethereum L1 RPC for ENS (*.eth) resolution — avoid flaky llamarpc defaults */
   ETH_RPC_URL: z.string().url().default("https://ethereum.publicnode.com"),
   /** Base RPC for Base Names (*.base.eth) resolution */

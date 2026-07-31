@@ -138,7 +138,7 @@ export async function interpretPolicyFromInput(input: {
     } catch (err) {
       if (isLlmCreditError(err)) {
         throw new Error(
-          "AI policy parsing is unavailable (Anthropic credits). Use Manual shares, or write percents and 0x addresses like: 30% to 0x… and 70% to 0x…",
+          "AI policy parsing is unavailable. Use Manual shares, or write percents and 0x addresses like: 30% to 0x… and 70% to 0x…",
         );
       }
       throw err;

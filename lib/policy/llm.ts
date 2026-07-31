@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { env } from "../config";
+import { env, getPublicAppUrl } from "../config";
 import { BPS_TOTAL } from "./validate";
 
 const llmPolicySchema = z.object({
@@ -30,11 +30,11 @@ const llmPolicySchema = z.object({
 export type LlmPolicyDraft = z.infer<typeof llmPolicySchema>;
 
 export function hasLlmKeys(): boolean {
-  return Boolean(env.ANTHROPIC_API_KEY);
+  return Boolean(env.OPENROUTER_API_KEY || env.ANTHROPIC_API_KEY);
 }
 
 export function llmRequiredError(service: string): string {
-  return `${service} needs natural-language interpretation — set ANTHROPIC_API_KEY`;
+  return `${service} needs natural-language interpretation — set OPENROUTER_API_KEY (or ANTHROPIC_API_KEY)`;
 }
 
 const policySystemPrompt = `You convert payment split instructions into structured USDC split policies for Remifi (Remifi on Celo).
@@ -49,17 +49,83 @@ Rules:
 - Settlement is on Celo USDC; ENS/Base names are identity only.
 - Respond with ONLY valid JSON matching the schema. No markdown.`;
 
-/**
- * Plain-English (or messy JSON) → split policy draft via Anthropic.
- */
-export async function interpretPolicyText(
+function parsePolicyJson(text: string, provider: string): LlmPolicyDraft {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error(`${provider} returned no policy JSON`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonMatch[0]!);
+  } catch {
+    throw new Error(`${provider} returned invalid policy JSON`);
+  }
+  return llmPolicySchema.parse(parsed);
+}
+
+async function interpretViaOpenRouter(
   requirements: string,
 ): Promise<LlmPolicyDraft> {
-  if (!env.ANTHROPIC_API_KEY) {
-    throw new Error(llmRequiredError("createPolicy"));
+  const key = env.OPENROUTER_API_KEY!;
+  const model = env.OPENROUTER_MODEL ?? "anthropic/claude-haiku-4.5";
+  const site = env.OPENROUTER_SITE_URL || getPublicAppUrl();
+  const title = env.OPENROUTER_APP_NAME || "Remifi";
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": site,
+      "X-Title": title,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0,
+      max_tokens: 1024,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: policySystemPrompt },
+        {
+          role: "user",
+          content: `Convert this into a split policy JSON object with keys name and recipients[{address,label,bps}]:\n\n${requirements}`,
+        },
+      ],
+    }),
+  });
+
+  const raw = await res.text();
+  if (!res.ok) {
+    let detail = raw.slice(0, 400);
+    try {
+      const j = JSON.parse(raw) as {
+        error?: { message?: string } | string;
+        message?: string;
+      };
+      if (typeof j.error === "string") detail = j.error;
+      else if (j.error?.message) detail = j.error.message;
+      else if (j.message) detail = j.message;
+    } catch {
+      /* keep slice */
+    }
+    throw new Error(`OpenRouter ${res.status}: ${detail}`);
   }
 
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  let data: { choices?: Array<{ message?: { content?: string | null } }> };
+  try {
+    data = JSON.parse(raw) as typeof data;
+  } catch {
+    throw new Error("OpenRouter returned invalid JSON");
+  }
+
+  const text = data.choices?.[0]?.message?.content?.trim() ?? "";
+  return parsePolicyJson(text, "OpenRouter");
+}
+
+async function interpretViaAnthropic(
+  requirements: string,
+): Promise<LlmPolicyDraft> {
+  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY! });
   const model = env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 
   const response = await client.messages.create({
@@ -81,19 +147,23 @@ export async function interpretPolicyText(
     .join("\n")
     .trim();
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Anthropic returned no policy JSON");
-  }
+  return parsePolicyJson(text, "Anthropic");
+}
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonMatch[0]!);
-  } catch {
-    throw new Error("Anthropic returned invalid policy JSON");
+/**
+ * Plain-English (or messy JSON) → split policy draft.
+ * Prefers OpenRouter; falls back to Anthropic if configured.
+ */
+export async function interpretPolicyText(
+  requirements: string,
+): Promise<LlmPolicyDraft> {
+  if (env.OPENROUTER_API_KEY) {
+    return interpretViaOpenRouter(requirements);
   }
-
-  return llmPolicySchema.parse(parsed);
+  if (env.ANTHROPIC_API_KEY) {
+    return interpretViaAnthropic(requirements);
+  }
+  throw new Error(llmRequiredError("createPolicy"));
 }
 
 /** Scale recipient bps so they sum to BPS_TOTAL (remainder on last). */
