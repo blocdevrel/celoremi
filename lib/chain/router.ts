@@ -221,11 +221,28 @@ export async function executeRouterSplitOnly(
     tag,
   ]);
   const fees = await celoFeeHints(publicClient);
+  // Explicit gas: fee-only txs on Celo can under-estimate and fail with
+  // "gas required exceeds allowance (~19k)" before executeSplit runs.
+  let gas: bigint;
+  try {
+    const estimated = await publicClient.estimateGas({
+      account,
+      to: router,
+      data: splitData,
+      ...fees,
+    });
+    gas = (estimated * 130n) / 100n;
+  } catch {
+    gas = 350_000n;
+  }
+  if (gas < 250_000n) gas = 250_000n;
+
   const splitTxHash = await walletClient.sendTransaction({
     account,
     to: router,
     data: splitData,
     chain: publicClient.chain,
+    gas,
     ...fees,
   });
   const splitReceipt = await publicClient.waitForTransactionReceipt({
