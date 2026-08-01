@@ -78,7 +78,7 @@ export async function GET() {
   } catch {
     router = {
       configured: Boolean(env.ROUTER_ADDRESS),
-      address: env.ROUTER_ADDRESS ?? null,
+      address: (env.ROUTER_ADDRESS as `0x${string}` | undefined) ?? null,
       ok: false,
       token: null,
       executor: null,
