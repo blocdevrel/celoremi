@@ -27,6 +27,7 @@ import {
   type RemifiToastState,
 } from "../utils/errors";
 import { normalizePolicy, policyMatchesSearch, sortPoliciesNewestFirst, summarizePolicyRecipients } from "../utils/policy";
+import { meaningfulRecipientLabel } from "@/lib/policy/labels";
 import {
   clampSendAmountToReserve,
   formatUsdc,
@@ -686,8 +687,10 @@ export function useRemifiApp() {
     recipients: Array<{ address: string; bps: number; label?: string }>,
   ) {
     const parts = recipients.map((r) => {
-      const pct = r.bps % 100 === 0 ? String(r.bps / 100) : (r.bps / 100).toFixed(2);
-      const who = r.label ? `${r.label} at ${r.address}` : r.address;
+      const pct =
+        r.bps % 100 === 0 ? String(r.bps / 100) : (r.bps / 100).toFixed(2);
+      const purpose = meaningfulRecipientLabel(r.label);
+      const who = purpose ? `${purpose} (${r.address})` : r.address;
       return `${pct}% to ${who}`;
     });
     return `Split ${parts.join(" and ")}`;

@@ -1,6 +1,7 @@
 "use client";
 
 import { shortAddr, truncateLabel } from "../utils/address";
+import { meaningfulRecipientLabel } from "@/lib/policy/labels";
 
 export type SplitShare = {
   pct: string;
@@ -14,28 +15,24 @@ export type SplitSharePreviewProps = {
   emptyHint?: string;
 };
 
-/** Skip placeholder labels like recipient1 / Recipient 2. */
-function isGenericRecipientLabel(label: string | null | undefined): boolean {
-  const t = (label ?? "").trim();
-  if (!t) return true;
-  return /^recipients?\s*[-_]?\s*\d+$/i.test(t);
-}
-
 function looksLikeName(value: string): boolean {
   return /\.(eth|base\.eth|celo)$/i.test(value.trim());
 }
 
-/** Prefer real role/ENS; otherwise short 0x… address. */
+/**
+ * Purpose/role when the user named one; otherwise the address (or ENS) alone.
+ * Never surfaces placeholders like r1 / recipient2.
+ */
 export function displayRecipientRole(
   label: string | null | undefined,
   address: string | null | undefined,
 ): { role: string; detail?: string } {
   const addr = (address ?? "").trim();
-  const lab = (label ?? "").trim();
+  const purpose = meaningfulRecipientLabel(label);
 
-  if (lab && !isGenericRecipientLabel(lab)) {
+  if (purpose) {
     return {
-      role: truncateLabel(lab, 16),
+      role: truncateLabel(purpose, 16),
       detail: addr ? shortAddr(addr) : undefined,
     };
   }

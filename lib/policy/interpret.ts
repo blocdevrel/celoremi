@@ -6,6 +6,7 @@ import {
   llmRequiredError,
   renormalizeBpsToTotal,
 } from "./llm";
+import { meaningfulRecipientLabel } from "./labels";
 import { validateRecipients, type PolicyRecipient } from "./validate";
 
 export type InterpretedPolicy = {
@@ -51,11 +52,14 @@ async function fromDraft(
   const scaled = renormalizeBpsToTotal(recipients);
   const resolved = await resolveRecipientAddresses(scaled);
   const validated = validateRecipients(
-    resolved.map((r) => ({
-      address: r.address,
-      bps: r.bps,
-      ...(r.label ? { label: r.label } : {}),
-    })),
+    resolved.map((r) => {
+      const label = meaningfulRecipientLabel(r.label);
+      return {
+        address: r.address,
+        bps: r.bps,
+        ...(label ? { label } : {}),
+      };
+    }),
   );
 
   return {
