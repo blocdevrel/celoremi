@@ -1,6 +1,7 @@
 "use client";
 
 import type { RemifiAppModel } from "../hooks/useRemifiApp";
+import { PickContactButton } from "../shared/PickContactButton";
 import { formatUsdc } from "../utils/usdc";
 
 export type PayTabProps = { app: RemifiAppModel };
@@ -9,12 +10,16 @@ export function PayTab({ app }: PayTabProps) {
   const {
     applyMaxAmount,
     busy,
+    canPickContact,
+    contactPickerBusy,
     formatBalanceLine,
     hirePriceBaseUnits,
     instantPay,
     maxSpendableBaseUnits,
     payAmount,
     payTo,
+    payToLabel,
+    pickPayContact,
     setPayAmount,
     setPayTo,
     walletUsdcBalance,
@@ -36,15 +41,35 @@ export function PayTab({ app }: PayTabProps) {
 
       <div className="grid gap-0 overflow-hidden rounded-2xl bg-pp-white/80 ring-1 ring-pp-ink/[0.04] sm:rounded-[1.35rem] sm:bg-pp-white">
         <div className="grid gap-4 px-4 py-5 sm:px-6 sm:py-6">
-          <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-pp-ink">To</span>
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-pp-ink">To</span>
+              {canPickContact ? (
+                <PickContactButton
+                  busy={contactPickerBusy}
+                  disabled={busy}
+                  onClick={() => void pickPayContact()}
+                />
+              ) : null}
+            </div>
             <input
               value={payTo}
               onChange={(e) => setPayTo(e.target.value)}
-              placeholder="0x… or name.eth"
+              placeholder={
+                canPickContact ? "Pick a contact or paste 0x…" : "0x… or name.eth"
+              }
               className="min-h-12 w-full rounded-xl border border-pp-ink/8 bg-pp-soft px-4 font-mono text-sm font-medium text-pp-ink outline-none transition placeholder:text-pp-ink/35 placeholder:font-normal focus:border-pp-ink/20 focus:bg-pp-white"
             />
-          </label>
+            {payToLabel ? (
+              <p className="text-xs font-medium text-pp-ink/45">
+                Sending to <strong className="text-pp-ink">{payToLabel}</strong>
+              </p>
+            ) : canPickContact ? (
+              <p className="text-xs font-medium text-pp-ink/40">
+                Use Pick contact for MiniPay friends — no address paste needed
+              </p>
+            ) : null}
+          </div>
 
           <label className="grid gap-1.5">
             <span className="text-sm font-semibold text-pp-ink">Amount</span>

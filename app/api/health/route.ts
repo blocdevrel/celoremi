@@ -59,15 +59,29 @@ export async function GET() {
   }
 
   try {
+    // Remifi hires POST /settle only. Celo's /supported on api.x402.celo.org
+    // often 500s while settle still works — probe settle readiness (non-5xx).
     const base =
       env.X402_FACILITATOR_URL === "https://x402.celo.org"
         ? "https://api.x402.celo.org"
         : env.X402_FACILITATOR_URL.replace(/\/$/, "");
-    const res = await fetch(`${base}/supported`, {
+    const settleRes = await fetch(`${base}/settle`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
       cache: "no-store",
       signal: AbortSignal.timeout(HEALTH_MS),
     });
-    facilitatorOk = res.ok;
+    if (settleRes.status < 500) {
+      facilitatorOk = true;
+    } else {
+      // Fallback: public portal /supported (api host is flaky)
+      const supportedRes = await fetch("https://x402.celo.org/supported", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(HEALTH_MS),
+      });
+      facilitatorOk = supportedRes.ok;
+    }
   } catch {
     facilitatorOk = false;
   }

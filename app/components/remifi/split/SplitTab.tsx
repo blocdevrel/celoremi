@@ -47,6 +47,10 @@ export function SplitTab({ app }: SplitTabProps) {
           setPolicyInputMode={app.setPolicyInputMode}
           setPolicyName={app.setPolicyName}
           updateManualRecipient={app.updateManualRecipient}
+          canPickContact={app.canPickContact}
+          contactPickerBusy={app.contactPickerBusy}
+          pickEnglishPolicyContact={app.pickEnglishPolicyContact}
+          pickManualRecipientContact={app.pickManualRecipientContact}
         />
       ) : (
         <RunPayrollPanel
