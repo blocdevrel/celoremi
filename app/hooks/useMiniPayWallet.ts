@@ -8,6 +8,7 @@ import {
   connectMiniPay,
   fundAgentWithUsdc,
   isMiniPayRuntime,
+  waitForMiniPayRuntime,
 } from "../../lib/minipay/connect";
 
 type WalletState = {
@@ -69,14 +70,16 @@ export function useMiniPayWallet() {
     }
   }, [applyConnected]);
 
-  /** Inside MiniPay: auto-connect on load (silent eth_accounts, then request if needed). */
+  /** Inside MiniPay: wait for provider injection, then auto-connect. */
   useEffect(() => {
-    if (!isMiniPayRuntime() || autoConnectStarted.current) return;
+    if (autoConnectStarted.current) return;
     autoConnectStarted.current = true;
 
-    setState((s) => ({ ...s, isMiniPay: true, connecting: true }));
-
     void (async () => {
+      const ready = await waitForMiniPayRuntime(5000);
+      if (!ready) return;
+
+      setState((s) => ({ ...s, isMiniPay: true, connecting: true }));
       try {
         const result = await autoConnectMiniPay();
         if (result) {

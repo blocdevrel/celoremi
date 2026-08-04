@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Address, WalletClient } from "viem";
 import { readUsdcBalanceBaseUnits } from "../../../../lib/minipay/balance";
-import { isMiniPayRuntime, isMobileDevice } from "../../../../lib/minipay/connect";
+import { isMiniPayRuntime, isMobileDevice, waitForMiniPayRuntime } from "../../../../lib/minipay/connect";
 import {
   appendContactToEnglish,
   requestMiniPayContact,
@@ -107,8 +107,16 @@ export function useRemifiApp() {
   const [telegramBusy, setTelegramBusy] = useState(false);
 
   useEffect(() => {
-    setInMiniPay(isMiniPayRuntime());
     setIsMobile(isMobileDevice());
+    setInMiniPay(isMiniPayRuntime());
+    let cancelled = false;
+    void (async () => {
+      const ready = await waitForMiniPayRuntime(5000);
+      if (!cancelled) setInMiniPay(ready || isMiniPayRuntime());
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadTelegramStatus = useCallback(async () => {

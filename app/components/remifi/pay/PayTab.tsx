@@ -1,7 +1,6 @@
 "use client";
 
 import type { RemifiAppModel } from "../hooks/useRemifiApp";
-import { PickContactButton } from "../shared/PickContactButton";
 import { formatUsdc } from "../utils/usdc";
 
 export type PayTabProps = { app: RemifiAppModel };
@@ -42,21 +41,22 @@ export function PayTab({ app }: PayTabProps) {
       <div className="grid gap-0 overflow-hidden rounded-2xl bg-pp-white/80 ring-1 ring-pp-ink/[0.04] sm:rounded-[1.35rem] sm:bg-pp-white">
         <div className="grid gap-4 px-4 py-5 sm:px-6 sm:py-6">
           <div className="grid gap-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-pp-ink">To</span>
-              {canPickContact ? (
-                <PickContactButton
-                  busy={contactPickerBusy}
-                  disabled={busy}
-                  onClick={() => void pickPayContact()}
-                />
-              ) : null}
-            </div>
+            <span className="text-sm font-semibold text-pp-ink">To</span>
+            {canPickContact ? (
+              <button
+                type="button"
+                disabled={busy || contactPickerBusy}
+                onClick={() => void pickPayContact()}
+                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-pp-ink/15 bg-pp-white px-4 text-sm font-semibold text-pp-ink transition hover:bg-pp-soft enabled:active:scale-[0.99] disabled:opacity-50"
+              >
+                {contactPickerBusy ? "Opening contacts…" : "Pick MiniPay contact"}
+              </button>
+            ) : null}
             <input
               value={payTo}
               onChange={(e) => setPayTo(e.target.value)}
               placeholder={
-                canPickContact ? "Pick a contact or paste 0x…" : "0x… or name.eth"
+                canPickContact ? "Or paste 0x… / name.eth" : "0x… or name.eth"
               }
               className="min-h-12 w-full rounded-xl border border-pp-ink/8 bg-pp-soft px-4 font-mono text-sm font-medium text-pp-ink outline-none transition placeholder:text-pp-ink/35 placeholder:font-normal focus:border-pp-ink/20 focus:bg-pp-white"
             />
@@ -66,7 +66,7 @@ export function PayTab({ app }: PayTabProps) {
               </p>
             ) : canPickContact ? (
               <p className="text-xs font-medium text-pp-ink/40">
-                Use Pick contact for MiniPay friends — no address paste needed
+                Tap Pick MiniPay contact to choose a friend
               </p>
             ) : null}
           </div>
