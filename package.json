@@ -25,7 +25,8 @@
     "openclaw:health": "tsx openclaw/skills/remifi-core/scripts/health-check.ts",
     "openclaw:due": "tsx openclaw/skills/remifi-core/scripts/run-due.ts",
     "openclaw:tick": "tsx scripts/openclaw-tick.ts",
-    "openclaw:wire": "node scripts/wire-openclaw-cron.mjs"
+    "openclaw:wire": "node scripts/wire-openclaw-cron.mjs",
+    "burst:pays": "tsx scripts/burst-instant-pays.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
