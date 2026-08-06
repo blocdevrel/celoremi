@@ -31,9 +31,17 @@ const erc20TransferAbi = [
   },
 ] as const;
 
-export function isMiniPayRuntime(): boolean {
-  return typeof window !== "undefined" && Boolean(window.ethereum?.isMiniPay);
-}
+import {
+  getInjectedEthereum,
+  isMiniPayRuntime,
+  waitForMiniPayRuntime,
+} from "./detect";
+
+export {
+  getInjectedEthereum,
+  isMiniPayRuntime,
+  waitForMiniPayRuntime,
+};
 
 /** Phone / tablet browsers — use MiniPay deeplink instead of browser wallet connect. */
 export function isMobileDevice(): boolean {
@@ -106,12 +114,13 @@ export function hasInjectedProvider(): boolean {
 }
 
 export function getEthereumProvider() {
-  if (typeof window === "undefined" || !window.ethereum) {
+  const eth = getInjectedEthereum();
+  if (!eth) {
     throw new Error(
       "No wallet found. Open Remifi inside MiniPay, or use a Celo-compatible browser wallet.",
     );
   }
-  return window.ethereum;
+  return eth;
 }
 
 export function createMiniPayWalletClient(): WalletClient {

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Address, WalletClient } from "viem";
 import { readUsdcBalanceBaseUnits } from "../../../../lib/minipay/balance";
-import { isMiniPayRuntime, isMobileDevice } from "../../../../lib/minipay/connect";
+import { isMiniPayRuntime, isMobileDevice, waitForMiniPayRuntime } from "../../../../lib/minipay/connect";
+import {
+  appendContactToEnglish,
+  requestMiniPayContact,
+} from "../../../../lib/minipay/request-contact";
 import { sendTaggedUsdcFromWallet } from "../../../../lib/minipay/wallet-payout";
 import { computeSplitAmounts } from "../../../../lib/policy/validate";
 import { fetchWithX402Hire } from "../../../../lib/x402/browser";
@@ -27,6 +31,7 @@ import {
   type RemifiToastState,
 } from "../utils/errors";
 import { normalizePolicy, policyMatchesSearch, sortPoliciesNewestFirst, summarizePolicyRecipients } from "../utils/policy";
+import { meaningfulRecipientLabel } from "@/lib/policy/labels";
 import {
   clampSendAmountToReserve,
   formatUsdc,
@@ -76,7 +81,9 @@ export function useRemifiApp() {
   const [resolvedPreview, setResolvedPreview] = useState<string | null>(null);
 
   const [payTo, setPayTo] = useState("");
+  const [payToLabel, setPayToLabel] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
+  const [contactPickerBusy, setContactPickerBusy] = useState(false);
   const [scheduleInterval, setScheduleInterval] = useState("1440");
   const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [activeSchedules, setActiveSchedules] = useState<
@@ -100,8 +107,16 @@ export function useRemifiApp() {
   const [telegramBusy, setTelegramBusy] = useState(false);
 
   useEffect(() => {
-    setInMiniPay(isMiniPayRuntime());
     setIsMobile(isMobileDevice());
+    setInMiniPay(isMiniPayRuntime());
+    let cancelled = false;
+    void (async () => {
+      const ready = await waitForMiniPayRuntime(5000);
+      if (!cancelled) setInMiniPay(ready || isMiniPayRuntime());
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadTelegramStatus = useCallback(async () => {
@@ -686,8 +701,10 @@ export function useRemifiApp() {
     recipients: Array<{ address: string; bps: number; label?: string }>,
   ) {
     const parts = recipients.map((r) => {
-      const pct = r.bps % 100 === 0 ? String(r.bps / 100) : (r.bps / 100).toFixed(2);
-      const who = r.label ? `${r.label} at ${r.address}` : r.address;
+      const pct =
+        r.bps % 100 === 0 ? String(r.bps / 100) : (r.bps / 100).toFixed(2);
+      const purpose = meaningfulRecipientLabel(r.label);
+      const who = purpose ? `${purpose} (${r.address})` : r.address;
       return `${pct}% to ${who}`;
     });
     return `Split ${parts.join(" and ")}`;
@@ -733,6 +750,109 @@ export function useRemifiApp() {
     );
     if (policyId) setPolicyId("");
   }
+
+  const canPickContact = inMiniPay || wallet.isMiniPay;
+
+  async function pickPayContact() {
+    if (!canPickContact) {
+      setToast({
+        kind: "err",
+        title: "MiniPay only",
+        text: "Open Remifi in MiniPay to pick a friend from your contacts",
+      });
+      return;
+    }
+    setContactPickerBusy(true);
+    try {
+      const contact = await requestMiniPayContact();
+      setPayTo(contact.address);
+      setPayToLabel(contact.name);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/reject|denied|cancel/i.test(msg)) {
+        setToast({
+          kind: "err",
+          title: "Couldn't pick contact",
+          text: friendlyAppError(e, "Contact picker failed", {
+            preferMiniPay: true,
+          }),
+        });
+      }
+    } finally {
+      setContactPickerBusy(false);
+    }
+  }
+
+  async function pickManualRecipientContact(index: number) {
+    if (!canPickContact) {
+      setToast({
+        kind: "err",
+        title: "MiniPay only",
+        text: "Open Remifi in MiniPay to pick a friend from your contacts",
+      });
+      return;
+    }
+    setContactPickerBusy(true);
+    try {
+      const contact = await requestMiniPayContact();
+      setManualRecipients((rows) =>
+        rows.map((row, i) =>
+          i === index
+            ? {
+                ...row,
+                address: contact.address,
+                label: row.label.trim() || contact.name,
+              }
+            : row,
+        ),
+      );
+      if (policyId) setPolicyId("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/reject|denied|cancel/i.test(msg)) {
+        setToast({
+          kind: "err",
+          title: "Couldn't pick contact",
+          text: friendlyAppError(e, "Contact picker failed", {
+            preferMiniPay: true,
+          }),
+        });
+      }
+    } finally {
+      setContactPickerBusy(false);
+    }
+  }
+
+  async function pickEnglishPolicyContact() {
+    if (!canPickContact) {
+      setToast({
+        kind: "err",
+        title: "MiniPay only",
+        text: "Open Remifi in MiniPay to pick a friend from your contacts",
+      });
+      return;
+    }
+    setContactPickerBusy(true);
+    try {
+      const contact = await requestMiniPayContact();
+      setEnglishText((text) => appendContactToEnglish(text, contact));
+      if (policyId) setPolicyId("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/reject|denied|cancel/i.test(msg)) {
+        setToast({
+          kind: "err",
+          title: "Couldn't pick contact",
+          text: friendlyAppError(e, "Contact picker failed", {
+            preferMiniPay: true,
+          }),
+        });
+      }
+    } finally {
+      setContactPickerBusy(false);
+    }
+  }
+
 
   useEffect(() => {
     if (!toast) return;
@@ -1258,7 +1378,10 @@ export function useRemifiApp() {
     setPolicyInputMode, manualRecipients, policySearch, setPolicySearch,
     wallet, policyName, setPolicyName, englishText, setEnglishText,
     splitAmount, setSplitAmount, policyId, setPolicyId, resolvedPreview,
-    payTo, setPayTo, payAmount, setPayAmount, scheduleInterval,
+    payTo, setPayTo: ((v: string) => { setPayTo(v); setPayToLabel(null); }) as typeof setPayTo, payToLabel,
+    payAmount, setPayAmount, scheduleInterval,
+    canPickContact, contactPickerBusy, pickPayContact,
+    pickManualRecipientContact, pickEnglishPolicyContact,
     setScheduleInterval, schedulesLoading, activeSchedules,
     walletUsdcBalance, inMiniPay, isMobile, loadRecentJobs,
     formatBalanceLine, hirePriceBaseUnits, maxSpendableBaseUnits, applyMaxAmount, selectPolicy,

@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { env, getPublicAppUrl } from "../config";
 import { BPS_TOTAL } from "./validate";
+import { meaningfulRecipientLabel } from "./labels";
 
 const llmPolicySchema = z.object({
   name: z.string().describe("Short human-readable policy name"),
@@ -13,7 +14,12 @@ const llmPolicySchema = z.object({
           .describe(
             "Recipient 0x address, ENS name (vitalik.eth), or Base name (alice.base.eth)",
           ),
-        label: z.string().describe("Role label: ops, growth, treasury, etc."),
+        label: z
+          .string()
+          .optional()
+          .describe(
+            "Purpose/role only when the user named one (Finance, ops, treasury). Omit otherwise — never invent r1/r2.",
+          ),
         bps: z
           .number()
           .int()
@@ -44,8 +50,9 @@ Rules:
 - Prefer shares that sum exactly to ${BPS_TOTAL}. If the user gives ratios (e.g. "3:2"), convert to proportional bps of ${BPS_TOTAL}.
 - If the user gives partial percents (e.g. 30% and 60%), keep those bps and leave the remainder unallocated — do not invent a third recipient.
 - Keep addresses/names exactly as given (0x hex, ENS like vitalik.eth, or Base names like alice.base.eth).
-- Use concise labels (ops, growth, treasury, alice, etc.).
-- Input may be plain English or messy JSON — interpret intent and fill missing labels.
+- Labels are purpose/role names ONLY when the user provides them (Finance, Management, ops, treasury, growth).
+- If the user only gives percents + addresses (no purpose), OMIT label entirely. Never invent placeholders like r1, r2, recipient1, or wallet2.
+- Input may be plain English or messy JSON — interpret intent; do not invent missing roles.
 - Settlement is on Celo USDC; ENS/Base names are identity only.
 - Respond with ONLY valid JSON matching the schema. No markdown.`;
 
@@ -60,7 +67,14 @@ function parsePolicyJson(text: string, provider: string): LlmPolicyDraft {
   } catch {
     throw new Error(`${provider} returned invalid policy JSON`);
   }
-  return llmPolicySchema.parse(parsed);
+  const draft = llmPolicySchema.parse(parsed);
+  return {
+    ...draft,
+    recipients: draft.recipients.map((r) => {
+      const label = meaningfulRecipientLabel(r.label);
+      return label ? { ...r, label } : { address: r.address, bps: r.bps };
+    }),
+  };
 }
 
 async function interpretViaOpenRouter(

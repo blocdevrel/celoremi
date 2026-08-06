@@ -64,7 +64,7 @@ const envSchema = z.object({
       return addr;
     }),
   MAX_AMOUNT_PER_JOB: z.coerce.bigint().default(1_000_000_000n),
-  MAX_DAILY_AMOUNT: z.coerce.bigint().default(10_000_000_000n),
+  MAX_DAILY_AMOUNT: z.coerce.bigint().default(100_000_000_000n),
   MIN_AMOUNT: z.coerce.bigint().default(10_000n),
   DEV_MOCK_PAYOUT: z
     .string()

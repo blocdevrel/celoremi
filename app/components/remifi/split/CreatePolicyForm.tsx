@@ -10,6 +10,7 @@ import {
   sharesFromPercentRows,
   SplitSharePreview,
 } from "../shared/SplitSharePreview";
+import { PickContactButton } from "../shared/PickContactButton";
 import { RemifiSelect } from "../shared/RemifiSelect";
 
 const fieldClass =
@@ -25,8 +26,12 @@ export type CreatePolicyFormProps = Pick<
   RemifiAppModel,
   | "addManualRecipient"
   | "busy"
+  | "canPickContact"
+  | "contactPickerBusy"
   | "englishText"
   | "manualRecipients"
+  | "pickEnglishPolicyContact"
+  | "pickManualRecipientContact"
   | "policyId"
   | "policyInputMode"
   | "policyName"
@@ -43,8 +48,12 @@ export type CreatePolicyFormProps = Pick<
 export function CreatePolicyForm({
   addManualRecipient,
   busy,
+  canPickContact,
+  contactPickerBusy,
   englishText,
   manualRecipients,
+  pickEnglishPolicyContact,
+  pickManualRecipientContact,
   policyId,
   policyInputMode,
   policyName,
@@ -110,8 +119,17 @@ export function CreatePolicyForm({
 
         {policyInputMode === "english" ? (
           <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-pp-ink">
-              Who gets what
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-pp-ink">
+                Who gets what
+              </span>
+              {canPickContact ? (
+                <PickContactButton
+                  busy={contactPickerBusy}
+                  disabled={busy}
+                  onClick={() => void pickEnglishPolicyContact()}
+                />
+              ) : null}
             </span>
             <textarea
               value={englishText}
@@ -124,8 +142,9 @@ export function CreatePolicyForm({
               className={areaClass}
             />
             <p className="text-xs font-medium leading-snug text-pp-ink/40">
-              Describe shares with ENS, Base names, or 0x addresses. Example:
-              20% Finance, 20% Management, 60% Operations.
+              {canPickContact
+                ? "Tap Pick contact to add MiniPay friends, then add shares (e.g. 50%)."
+                : "Describe shares with ENS, Base names, or 0x addresses. Example: 20% Finance, 20% Management, 60% Operations."}
             </p>
           </label>
         ) : (
@@ -150,8 +169,19 @@ export function CreatePolicyForm({
                   className="grid gap-2 rounded-xl bg-pp-soft p-3 sm:grid-cols-[1fr_5.5rem_4.25rem_auto] sm:items-end sm:gap-2"
                 >
                   <label className="grid gap-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pp-ink/35">
-                      Address / name
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pp-ink/35">
+                        {canPickContact ? "Contact / address" : "Address / name"}
+                      </span>
+                      {canPickContact ? (
+                        <PickContactButton
+                          busy={contactPickerBusy}
+                          disabled={busy}
+                          label="Pick"
+                          onClick={() => void pickManualRecipientContact(index)}
+                          className="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-pp-ink/10 bg-pp-white px-2.5 text-[10px] font-semibold text-pp-ink transition hover:bg-pp-soft disabled:opacity-50"
+                        />
+                      ) : null}
                     </span>
                     <input
                       value={row.address}
@@ -159,11 +189,13 @@ export function CreatePolicyForm({
                         updateManualRecipient(index, "address", e.target.value)
                       }
                       placeholder={
-                        index === 0
-                          ? "finance.yourdao.eth"
-                          : index === 1
-                            ? "management.yourdao.eth"
-                            : "ops.yourdao.eth"
+                        canPickContact
+                          ? "Pick contact"
+                          : index === 0
+                            ? "finance.yourdao.eth"
+                            : index === 1
+                              ? "management.yourdao.eth"
+                              : "ops.yourdao.eth"
                       }
                       className={`${smallFieldClass} font-mono text-xs`}
                     />

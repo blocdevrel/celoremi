@@ -2,6 +2,7 @@
 
 import type { JobResult } from "../types";
 import { shortAddr, truncateLabel } from "../utils/address";
+import { meaningfulRecipientLabel } from "@/lib/policy/labels";
 import {
   formatJobWhen,
   jobExplorerUrl,
@@ -124,10 +125,11 @@ export function JobActivityRow({ job, variant }: JobActivityRowProps) {
               (transfer.txHash
                 ? `https://celoscan.io/tx/${transfer.txHash}`
                 : null);
-            const legLabel = truncateLabel(
-              transfer.label?.trim() || shortAddr(transfer.to),
-              16,
-            );
+            const purpose = meaningfulRecipientLabel(transfer.label);
+            const legTitle = purpose || transfer.to || "Recipient";
+            const legPrimary = purpose
+              ? truncateLabel(purpose, 16)
+              : shortAddr(transfer.to);
             const leg = (
               <>
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pp-white text-[9px] font-bold uppercase tracking-wide text-pp-ink/45 ring-1 ring-pp-ink/[0.04]">
@@ -136,15 +138,15 @@ export function JobActivityRow({ job, variant }: JobActivityRowProps) {
                 <div className="min-w-0 flex-1 overflow-hidden">
                   <p
                     className="truncate text-[13px] font-semibold tracking-tight text-pp-ink/80"
-                    title={transfer.label?.trim() || transfer.to}
+                    title={legTitle}
                   >
-                    {legLabel}
+                    {legPrimary}
                   </p>
-                  <p className="mt-0.5 truncate text-[11px] text-pp-ink/35">
-                    {transfer.label?.trim()
-                      ? shortAddr(transfer.to)
-                      : "Recipient"}
-                  </p>
+                  {purpose ? (
+                    <p className="mt-0.5 truncate text-[11px] text-pp-ink/35">
+                      {shortAddr(transfer.to)}
+                    </p>
+                  ) : null}
                 </div>
                 <p className="shrink-0 text-[13px] font-semibold tabular-nums tracking-tight text-pp-ink/80">
                   ${formatUsdc(transfer.amount)}

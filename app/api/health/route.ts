@@ -10,6 +10,24 @@ import {
 import { isTelegramEnabled } from "@/lib/telegram/client";
 import { jsonOk } from "@/lib/http";
 
+const HEALTH_MS = 4_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("health probe timeout")), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 export async function GET() {
   const agent = getAgentAddress();
   let usdcBalance: string | null = null;
@@ -20,16 +38,19 @@ export async function GET() {
 
   try {
     const client = createCeloPublicClient();
-    await client.getBlockNumber();
+    await withTimeout(client.getBlockNumber(), HEALTH_MS);
     chainOk = true;
 
     if (agent) {
-      const balance = await client.readContract({
-        address: env.USDC_ADDRESS as `0x${string}`,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [agent],
-      });
+      const balance = await withTimeout(
+        client.readContract({
+          address: env.USDC_ADDRESS as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [agent],
+        }),
+        HEALTH_MS,
+      );
       usdcBalance = balance.toString();
       usdcBalanceFormatted = formatUnits(balance, USDC_DECIMALS);
     }
@@ -38,17 +59,46 @@ export async function GET() {
   }
 
   try {
+    // Remifi hires POST /settle only. Celo's /supported on api.x402.celo.org
+    // often 500s while settle still works — probe settle readiness (non-5xx).
     const base =
       env.X402_FACILITATOR_URL === "https://x402.celo.org"
         ? "https://api.x402.celo.org"
         : env.X402_FACILITATOR_URL.replace(/\/$/, "");
-    const res = await fetch(`${base}/supported`, { cache: "no-store" });
-    facilitatorOk = res.ok;
+    const settleRes = await fetch(`${base}/settle`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+      cache: "no-store",
+      signal: AbortSignal.timeout(HEALTH_MS),
+    });
+    if (settleRes.status < 500) {
+      facilitatorOk = true;
+    } else {
+      // Fallback: public portal /supported (api host is flaky)
+      const supportedRes = await fetch("https://x402.celo.org/supported", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(HEALTH_MS),
+      });
+      facilitatorOk = supportedRes.ok;
+    }
   } catch {
     facilitatorOk = false;
   }
 
-  const router = await readRouterHealth();
+  let router: Awaited<ReturnType<typeof readRouterHealth>>;
+  try {
+    router = await withTimeout(readRouterHealth(), HEALTH_MS);
+  } catch {
+    router = {
+      configured: Boolean(env.ROUTER_ADDRESS),
+      address: (env.ROUTER_ADDRESS as `0x${string}` | undefined) ?? null,
+      ok: false,
+      token: null,
+      executor: null,
+      error: "health probe timeout",
+    };
+  }
 
   return jsonOk({
     ok: true,
@@ -66,7 +116,6 @@ export async function GET() {
       hirePrice: env.X402_HIRE_PRICE.toString(),
       facilitator: env.X402_FACILITATOR_URL,
       facilitatorOk,
-      // Track 2: facilitator settle. Track 1: classic tagged USDC transfers on payroll/sends.
       hireSettle: "facilitator_primary",
       hireGate: isX402Enabled() ? "x402_then_tagged_payout" : "api_key_or_open_dev",
     },
@@ -85,5 +134,6 @@ export async function GET() {
     telegram: {
       enabled: isTelegramEnabled(),
     },
+    maxDailyAmount: env.MAX_DAILY_AMOUNT.toString(),
   });
 }
